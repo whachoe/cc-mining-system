@@ -44,7 +44,7 @@ while not reachedBedrock and not Storage.outOfFuel do
   for _ = 1, sideLength do
     if stopsRun(Movement.down()) then break end
     if stopsRun(Movement.forward()) then break end
-    turtle.digUp()
+    Movement.clearUp()
   end
 
   sideIndex = (sideIndex % 4) + 1

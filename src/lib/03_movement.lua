@@ -101,6 +101,18 @@ function Movement.down()
   return ok, blockedByStorage
 end
 
+-- clears the block directly above without moving into it (e.g. carving
+-- headroom into a staircase) -- same "never dig a storage block" guard as
+-- the move functions, just without an attempted move backing it
+function Movement.clearUp()
+  local ok, data = turtle.inspectUp()
+  if ok and Inventory.isStorageBlock(data.name) then
+    return false
+  end
+  turtle.digUp()
+  return true
+end
+
 function Movement.turnLeft()
   turtle.turnLeft()
   Movement.facing = (Movement.facing - 1) % 4

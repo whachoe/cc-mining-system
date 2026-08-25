@@ -93,4 +93,23 @@ Harness.equal(blockedByStorage5, true, "down reports the failure was caused by a
 Harness.equal(Movement.pos.y, 0, "position unchanged when down is blocked by a storage block")
 Harness.equal(turtle._digCalls, 0, "a storage block is never dug by down")
 
+-- Movement.clearUp() digs headroom above without moving, but still never
+-- digs a storage block sitting up there
+turtle = MockCC.newTurtle()
+loadMovementLibs()
+
+local cleared = Movement.clearUp()
+Harness.equal(cleared, true, "clearUp reports it dug an ordinary block")
+Harness.equal(turtle._digCalls, 1, "clearUp actually dug the block above")
+Harness.equal(Movement.pos.y, 0, "clearUp never moves the turtle")
+Harness.equal(Movement.moveCount, 0, "clearUp is not counted as a move")
+
+turtle = MockCC.newTurtle()
+turtle._inspectUp = { true, { name = "minecraft:chest" } }
+loadMovementLibs()
+
+local cleared2 = Movement.clearUp()
+Harness.equal(cleared2, false, "clearUp reports a storage block was left alone")
+Harness.equal(turtle._digCalls, 0, "a storage block above is never dug by clearUp")
+
 Harness.finish()
