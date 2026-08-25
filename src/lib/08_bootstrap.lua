@@ -1,9 +1,12 @@
 Bootstrap = {}
 
 -- common startup for every program: reserve the fuel slot, scan for the
--- nearest storage block, and wire up the after-every-move checks
+-- nearest storage block, wire up the after-every-move checks, and send an
+-- initial status report so a run that quits early still leaves a trace of
+-- having started (and what its starting fuel/position/storage state was)
 function Bootstrap.init()
   turtle.select(Config.fuelSlot)
+  Inventory.topUpFuel(turtle.getFuelLimit())
 
   local loc = Scan.findStorage()
   if loc ~= nil then
@@ -15,6 +18,8 @@ function Bootstrap.init()
     Storage.refuelCheck()
     Webhook.maybeReport()
   end)
+
+  Webhook.report()
 end
 
 -- common shutdown for every program: return to the exact start position

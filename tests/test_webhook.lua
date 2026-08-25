@@ -33,26 +33,50 @@ Movement.forward()
 Webhook.report()
 Harness.equal(#http._calls, 0, "no webhook URL configured means no HTTP call is made")
 
--- moving through Bootstrap's wiring fires the webhook every N moves, and
--- the payload posted matches what actually happened
+-- Bootstrap.init() tops up fuel from whatever's already sitting in the fuel
+-- slot, not just from a scanned storage chest -- a turtle pre-loaded with
+-- fuel but with no chest in range (or an empty one) shouldn't run dry after
+-- one move
+loadFullStack()
+Config.webhookUrl = ""
+turtle._fuelLevel = 0
+turtle._slots[Config.fuelSlot] = { name = "minecraft:coal", count = 5 }
+Bootstrap.init()
+Harness.equal(turtle._fuelLevel, 5, "fuel topped up from the fuel slot's own contents at startup")
+Harness.equal(turtle._slots[Config.fuelSlot], nil, "the fuel slot's coal was consumed topping up")
+
+-- Bootstrap.init() itself sends a status report immediately, so a run that
+-- quits right after starting still leaves a trace of having started
+loadFullStack()
+Config.webhookUrl = "https://example.test/webhook"
+Bootstrap.init()
+Harness.equal(#http._calls, 1, "Bootstrap.init() sends an initial status report")
+
+local startPayload = textutils._calls[1]
+Harness.equal(startPayload.moveCount, 0, "the initial report fires before any moves happen")
+Harness.equal(startPayload.fuelLevel, 1000, "the initial report reflects the turtle's actual fuel level")
+
+-- moving through Bootstrap's wiring fires the webhook every N moves after
+-- that, and the payload posted matches what actually happened
 loadFullStack()
 Config.webhookUrl = "https://example.test/webhook"
 Config.webhookInterval = 3
 Bootstrap.init()
+Harness.equal(#http._calls, 1, "Bootstrap.init()'s own report counts as the first call")
 
 Movement.forward()
 Movement.forward()
-Harness.equal(#http._calls, 0, "webhook does not fire before reaching the interval")
+Harness.equal(#http._calls, 1, "webhook does not fire before reaching the interval")
 
 Movement.forward() -- 3rd move: hits the interval
-Harness.equal(#http._calls, 1, "webhook fires exactly on the configured move interval")
+Harness.equal(#http._calls, 2, "webhook fires exactly on the configured move interval")
 
-local call = http._calls[1]
+local call = http._calls[2]
 Harness.equal(call.url, "https://example.test/webhook", "posts to the configured webhook URL")
 Harness.equal(call.headers["Content-Type"], "application/json", "sends a JSON content type")
-Harness.equal(call.body, "MOCK_JSON:1", "posts exactly what serializeJSON returned")
+Harness.equal(call.body, "MOCK_JSON:2", "posts exactly what serializeJSON returned")
 
-local payload = textutils._calls[1]
+local payload = textutils._calls[2]
 Harness.equal(payload.turtleId, 42, "payload includes the turtle id from os.getComputerID()")
 Harness.equal(payload.moveCount, 3, "payload reflects the move count at the time it fired")
 Harness.equal(payload.position.z, 3, "payload position matches where the turtle actually is")
@@ -60,10 +84,10 @@ Harness.equal(payload.worldPosition, nil, "worldPosition is omitted when WorldPo
 
 Movement.forward()
 Movement.forward()
-Harness.equal(#http._calls, 1, "no extra webhook calls between intervals")
+Harness.equal(#http._calls, 2, "no extra webhook calls between intervals")
 
 Movement.forward() -- 6th move: next interval
-Harness.equal(#http._calls, 2, "webhook fires again on the next interval")
+Harness.equal(#http._calls, 3, "webhook fires again on the next interval")
 
 -- once WorldPosition is configured, the payload includes absolute coordinates
 loadFullStack()
