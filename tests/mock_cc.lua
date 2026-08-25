@@ -11,6 +11,7 @@ function M.newTurtle()
     _fuelLevel = 1000,
     _fuelLimit = 20000,
     _forwardBlocked = 0, -- attempts to fail before succeeding; math.huge = never succeeds
+    _upBlocked = 0,
     _downBlocked = 0,
     _inspectUp = { false },
     _inspectDown = { false },
@@ -18,6 +19,7 @@ function M.newTurtle()
     -- calls; once exhausted, defaults to {false} (open air)
     _inspectSequence = {},
     _inspectIndex = 1,
+    _digCalls = 0, -- how many times dig/digUp/digDown were actually invoked
   }
 
   local function consumeBlocked(fieldName)
@@ -106,7 +108,7 @@ function M.newTurtle()
   end
 
   function t.up()
-    return true
+    return not consumeBlocked("_upBlocked")
   end
 
   function t.down()
@@ -122,14 +124,17 @@ function M.newTurtle()
   end
 
   function t.dig()
+    t._digCalls = t._digCalls + 1
     return true
   end
 
   function t.digUp()
+    t._digCalls = t._digCalls + 1
     return true
   end
 
   function t.digDown()
+    t._digCalls = t._digCalls + 1
     return true
   end
 
