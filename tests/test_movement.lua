@@ -42,8 +42,9 @@ turtle = MockCC.newTurtle()
 turtle._forwardBlocked = math.huge
 loadMovementLibs()
 
-local ok = Movement.forward()
+local ok, blockedByStorage = Movement.forward()
 Harness.equal(ok, false, "permanently blocked forward gives up")
+Harness.equal(blockedByStorage, false, "a non-storage obstruction is not reported as storage-blocked")
 Harness.equal(Movement.pos.z, 0, "position unchanged after a failed forward")
 Harness.check(turtle._digCalls > 0, "a non-storage obstruction is dug at least once")
 
@@ -63,8 +64,9 @@ turtle._forwardBlocked = math.huge
 turtle._inspectSequence = { { true, { name = "minecraft:chest" } } }
 loadMovementLibs()
 
-local ok3 = Movement.forward()
+local ok3, blockedByStorage3 = Movement.forward()
 Harness.equal(ok3, false, "forward blocked by a storage block reports failure")
+Harness.equal(blockedByStorage3, true, "forward reports the failure was caused by a storage block")
 Harness.equal(Movement.pos.z, 0, "position unchanged when blocked by a storage block")
 Harness.equal(turtle._digCalls, 0, "a storage block is never dug by forward")
 
@@ -74,8 +76,9 @@ turtle._upBlocked = math.huge
 turtle._inspectUp = { true, { name = "minecraft:barrel" } }
 loadMovementLibs()
 
-local ok4 = Movement.up()
+local ok4, blockedByStorage4 = Movement.up()
 Harness.equal(ok4, false, "up blocked by a storage block reports failure")
+Harness.equal(blockedByStorage4, true, "up reports the failure was caused by a storage block")
 Harness.equal(Movement.pos.y, 0, "position unchanged when up is blocked by a storage block")
 Harness.equal(turtle._digCalls, 0, "a storage block is never dug by up")
 
@@ -84,8 +87,9 @@ turtle._downBlocked = math.huge
 turtle._inspectDown = { true, { name = "minecraft:shulker_box" } }
 loadMovementLibs()
 
-local ok5 = Movement.down()
+local ok5, blockedByStorage5 = Movement.down()
 Harness.equal(ok5, false, "down blocked by a storage block reports failure")
+Harness.equal(blockedByStorage5, true, "down reports the failure was caused by a storage block")
 Harness.equal(Movement.pos.y, 0, "position unchanged when down is blocked by a storage block")
 Harness.equal(turtle._digCalls, 0, "a storage block is never dug by down")
 

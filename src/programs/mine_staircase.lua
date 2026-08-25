@@ -32,11 +32,13 @@ local reachedBedrock = false
 while not reachedBedrock do
   local sideLength = sides[sideIndex]
   for _ = 1, sideLength do
-    if not Movement.down() then
+    local downOk, downBlockedByStorage = Movement.down()
+    if not downOk and not downBlockedByStorage then
       reachedBedrock = true
       break
     end
-    if not Movement.forward() then
+    local forwardOk, forwardBlockedByStorage = Movement.forward()
+    if not forwardOk and not forwardBlockedByStorage then
       reachedBedrock = true
       break
     end

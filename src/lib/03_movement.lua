@@ -25,17 +25,20 @@ Movement.moveHooks = {}
 -- retries a blocked move by digging/attacking in front of it; gives up
 -- after MAX_MOVE_ATTEMPTS (e.g. bedrock, which can never be dug through), or
 -- immediately if the obstruction is a storage block -- never dig into a
--- chest/barrel just because it happens to be in the way
+-- chest/barrel just because it happens to be in the way.
+-- second return value tells the caller *why* it failed: true if a storage
+-- block was the obstruction, so callers can treat that differently from a
+-- genuine dead end (bedrock, exhausted retries)
 local function attemptMove(moveFn, digFn, attackFn, inspectFn)
   for _ = 1, MAX_MOVE_ATTEMPTS do
     if moveFn() then
-      return true
+      return true, false
     end
     if digFn then
       if inspectFn then
         local ok, data = inspectFn()
         if ok and Inventory.isStorageBlock(data.name) then
-          return false
+          return false, true
         end
       end
       digFn()
@@ -44,7 +47,7 @@ local function attemptMove(moveFn, digFn, attackFn, inspectFn)
       attackFn()
     end
   end
-  return false
+  return false, false
 end
 
 function Movement.addMoveHook(fn)
@@ -59,14 +62,14 @@ local function notifyMove()
 end
 
 function Movement.forward()
-  local ok = attemptMove(turtle.forward, turtle.dig, turtle.attack, turtle.inspect)
+  local ok, blockedByStorage = attemptMove(turtle.forward, turtle.dig, turtle.attack, turtle.inspect)
   if ok then
     local dir = DIRS[Movement.facing]
     Movement.pos.x = Movement.pos.x + dir.x
     Movement.pos.z = Movement.pos.z + dir.z
     notifyMove()
   end
-  return ok
+  return ok, blockedByStorage
 end
 
 function Movement.back()
@@ -81,21 +84,21 @@ function Movement.back()
 end
 
 function Movement.up()
-  local ok = attemptMove(turtle.up, turtle.digUp, turtle.attackUp, turtle.inspectUp)
+  local ok, blockedByStorage = attemptMove(turtle.up, turtle.digUp, turtle.attackUp, turtle.inspectUp)
   if ok then
     Movement.pos.y = Movement.pos.y + 1
     notifyMove()
   end
-  return ok
+  return ok, blockedByStorage
 end
 
 function Movement.down()
-  local ok = attemptMove(turtle.down, turtle.digDown, turtle.attackDown, turtle.inspectDown)
+  local ok, blockedByStorage = attemptMove(turtle.down, turtle.digDown, turtle.attackDown, turtle.inspectDown)
   if ok then
     Movement.pos.y = Movement.pos.y - 1
     notifyMove()
   end
-  return ok
+  return ok, blockedByStorage
 end
 
 function Movement.turnLeft()
@@ -123,19 +126,28 @@ end
 -- navigate to an arbitrary {x,y,z} (in the same start-relative coordinate
 -- frame as Movement.pos) using the accumulated odometry: vertical first,
 -- then x, then z. Never turns to face a particular direction on arrival.
+-- Gives up on an axis (rather than looping forever) if a leg is permanently
+-- blocked -- e.g. a storage block sitting exactly on the path -- leaving the
+-- turtle short of the target on that axis.
 function Movement.goTo(target)
   while Movement.pos.y > target.y do
-    Movement.down()
+    if not Movement.down() then
+      break
+    end
   end
   while Movement.pos.y < target.y do
-    Movement.up()
+    if not Movement.up() then
+      break
+    end
   end
 
   local dx = target.x - Movement.pos.x
   if dx ~= 0 then
     Movement.turnTo(dx > 0 and 1 or 3)
     while Movement.pos.x ~= target.x do
-      Movement.forward()
+      if not Movement.forward() then
+        break
+      end
     end
   end
 
@@ -143,7 +155,9 @@ function Movement.goTo(target)
   if dz ~= 0 then
     Movement.turnTo(dz > 0 and 0 or 2)
     while Movement.pos.z ~= target.z do
-      Movement.forward()
+      if not Movement.forward() then
+        break
+      end
     end
   end
 end
