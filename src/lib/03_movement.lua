@@ -23,13 +23,21 @@ Movement.moveCount = 0
 Movement.moveHooks = {}
 
 -- retries a blocked move by digging/attacking in front of it; gives up
--- after MAX_MOVE_ATTEMPTS (e.g. bedrock, which can never be dug through)
-local function attemptMove(moveFn, digFn, attackFn)
+-- after MAX_MOVE_ATTEMPTS (e.g. bedrock, which can never be dug through), or
+-- immediately if the obstruction is a storage block -- never dig into a
+-- chest/barrel just because it happens to be in the way
+local function attemptMove(moveFn, digFn, attackFn, inspectFn)
   for _ = 1, MAX_MOVE_ATTEMPTS do
     if moveFn() then
       return true
     end
     if digFn then
+      if inspectFn then
+        local ok, data = inspectFn()
+        if ok and Inventory.isStorageBlock(data.name) then
+          return false
+        end
+      end
       digFn()
     end
     if attackFn then
@@ -51,7 +59,7 @@ local function notifyMove()
 end
 
 function Movement.forward()
-  local ok = attemptMove(turtle.forward, turtle.dig, turtle.attack)
+  local ok = attemptMove(turtle.forward, turtle.dig, turtle.attack, turtle.inspect)
   if ok then
     local dir = DIRS[Movement.facing]
     Movement.pos.x = Movement.pos.x + dir.x
@@ -73,7 +81,7 @@ function Movement.back()
 end
 
 function Movement.up()
-  local ok = attemptMove(turtle.up, turtle.digUp, turtle.attackUp)
+  local ok = attemptMove(turtle.up, turtle.digUp, turtle.attackUp, turtle.inspectUp)
   if ok then
     Movement.pos.y = Movement.pos.y + 1
     notifyMove()
@@ -82,7 +90,7 @@ function Movement.up()
 end
 
 function Movement.down()
-  local ok = attemptMove(turtle.down, turtle.digDown, turtle.attackDown)
+  local ok = attemptMove(turtle.down, turtle.digDown, turtle.attackDown, turtle.inspectDown)
   if ok then
     Movement.pos.y = Movement.pos.y - 1
     notifyMove()
