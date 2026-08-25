@@ -1,0 +1,147 @@
+Movement = {}
+
+-- position/facing are relative to the turtle's position and orientation
+-- when the program started (no GPS available) -- facing 0 is "however it
+-- was originally facing", and increases clockwise (turnRight) from there
+local DIRS = {
+  [0] = { x = 0, z = 1 },
+  [1] = { x = 1, z = 0 },
+  [2] = { x = 0, z = -1 },
+  [3] = { x = -1, z = 0 },
+}
+
+local MAX_MOVE_ATTEMPTS = 20
+
+-- the position/facing the turtle was at when the program started -- always
+-- {0,0,0}/0 by definition of this relative coordinate frame, but named
+-- explicitly so other modules (e.g. Webhook) don't have to hardcode it
+Movement.start = { x = 0, y = 0, z = 0, facing = 0 }
+
+Movement.pos = { x = 0, y = 0, z = 0 }
+Movement.facing = 0
+Movement.moveCount = 0
+Movement.moveHooks = {}
+
+-- retries a blocked move by digging/attacking in front of it; gives up
+-- after MAX_MOVE_ATTEMPTS (e.g. bedrock, which can never be dug through)
+local function attemptMove(moveFn, digFn, attackFn)
+  for _ = 1, MAX_MOVE_ATTEMPTS do
+    if moveFn() then
+      return true
+    end
+    if digFn then
+      digFn()
+    end
+    if attackFn then
+      attackFn()
+    end
+  end
+  return false
+end
+
+function Movement.addMoveHook(fn)
+  table.insert(Movement.moveHooks, fn)
+end
+
+local function notifyMove()
+  Movement.moveCount = Movement.moveCount + 1
+  for _, hook in ipairs(Movement.moveHooks) do
+    hook()
+  end
+end
+
+function Movement.forward()
+  local ok = attemptMove(turtle.forward, turtle.dig, turtle.attack)
+  if ok then
+    local dir = DIRS[Movement.facing]
+    Movement.pos.x = Movement.pos.x + dir.x
+    Movement.pos.z = Movement.pos.z + dir.z
+    notifyMove()
+  end
+  return ok
+end
+
+function Movement.back()
+  local ok = attemptMove(turtle.back, nil, nil)
+  if ok then
+    local dir = DIRS[Movement.facing]
+    Movement.pos.x = Movement.pos.x - dir.x
+    Movement.pos.z = Movement.pos.z - dir.z
+    notifyMove()
+  end
+  return ok
+end
+
+function Movement.up()
+  local ok = attemptMove(turtle.up, turtle.digUp, turtle.attackUp)
+  if ok then
+    Movement.pos.y = Movement.pos.y + 1
+    notifyMove()
+  end
+  return ok
+end
+
+function Movement.down()
+  local ok = attemptMove(turtle.down, turtle.digDown, turtle.attackDown)
+  if ok then
+    Movement.pos.y = Movement.pos.y - 1
+    notifyMove()
+  end
+  return ok
+end
+
+function Movement.turnLeft()
+  turtle.turnLeft()
+  Movement.facing = (Movement.facing - 1) % 4
+end
+
+function Movement.turnRight()
+  turtle.turnRight()
+  Movement.facing = (Movement.facing + 1) % 4
+end
+
+function Movement.turnTo(targetFacing)
+  local diff = (targetFacing - Movement.facing) % 4
+  if diff == 1 then
+    Movement.turnRight()
+  elseif diff == 2 then
+    Movement.turnRight()
+    Movement.turnRight()
+  elseif diff == 3 then
+    Movement.turnLeft()
+  end
+end
+
+-- navigate to an arbitrary {x,y,z} (in the same start-relative coordinate
+-- frame as Movement.pos) using the accumulated odometry: vertical first,
+-- then x, then z. Never turns to face a particular direction on arrival.
+function Movement.goTo(target)
+  while Movement.pos.y > target.y do
+    Movement.down()
+  end
+  while Movement.pos.y < target.y do
+    Movement.up()
+  end
+
+  local dx = target.x - Movement.pos.x
+  if dx ~= 0 then
+    Movement.turnTo(dx > 0 and 1 or 3)
+    while Movement.pos.x ~= target.x do
+      Movement.forward()
+    end
+  end
+
+  local dz = target.z - Movement.pos.z
+  if dz ~= 0 then
+    Movement.turnTo(dz > 0 and 0 or 2)
+    while Movement.pos.z ~= target.z do
+      Movement.forward()
+    end
+  end
+end
+
+-- navigate back to (0,0,0) and face the original start direction
+function Movement.returnToStart()
+  Movement.goTo({ x = 0, y = 0, z = 0 })
+  Movement.turnTo(0)
+end
