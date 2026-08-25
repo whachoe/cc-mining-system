@@ -29,19 +29,22 @@ local sides = { width, length, width, length }
 local sideIndex = 1
 local reachedBedrock = false
 
-while not reachedBedrock do
+-- true if this move should stop the whole run: either a genuine dead end
+-- (not a storage block, which is fine to just skip past) or the storage
+-- chest turned out to have no fuel left (Storage.refuel sets this)
+local function stopsRun(ok, blockedByStorage)
+  if not ok and not blockedByStorage then
+    reachedBedrock = true
+  end
+  return reachedBedrock or Storage.outOfFuel
+end
+
+while not reachedBedrock and not Storage.outOfFuel do
   local sideLength = sides[sideIndex]
   for _ = 1, sideLength do
-    local downOk, downBlockedByStorage = Movement.down()
-    if not downOk and not downBlockedByStorage then
-      reachedBedrock = true
-      break
-    end
-    local forwardOk, forwardBlockedByStorage = Movement.forward()
-    if not forwardOk and not forwardBlockedByStorage then
-      reachedBedrock = true
-      break
-    end
+    if stopsRun(Movement.down()) then break end
+    if stopsRun(Movement.forward()) then break end
+    turtle.digUp()
   end
 
   sideIndex = (sideIndex % 4) + 1

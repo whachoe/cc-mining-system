@@ -32,12 +32,14 @@ local function clearLayer()
   local entry = { x = Movement.pos.x, y = Movement.pos.y, z = Movement.pos.z }
 
   for row = 1, width do
+    if Storage.outOfFuel then break end
     Movement.turnTo(row % 2 == 1 and 0 or 2)
     for _ = 1, length - 1 do
+      if Storage.outOfFuel then break end
       Movement.forward()
     end
 
-    if row < width then
+    if row < width and not Storage.outOfFuel then
       Movement.goTo({
         x = entry.x + row,
         y = entry.y,
@@ -60,6 +62,7 @@ local origin = { x = Movement.pos.x, y = Movement.pos.y, z = Movement.pos.z }
 local layerStep = Config.roomLayerDirection == "down" and -1 or 1
 
 for layer = 1, height do
+  if Storage.outOfFuel then break end
   Movement.goTo({ x = origin.x, y = origin.y + (layer - 1) * layerStep, z = origin.z })
   Movement.turnTo(0)
   clearLayer()

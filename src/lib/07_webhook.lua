@@ -15,11 +15,15 @@ function Webhook.buildPayload()
   }
 end
 
-function Webhook.report()
+-- `message` is optional -- a short human-readable note (e.g. why a run
+-- stopped early) included alongside the usual status fields
+function Webhook.report(message)
   if Config.webhookUrl == nil or Config.webhookUrl == "" then
     return
   end
-  local body = textutils.serializeJSON(Webhook.buildPayload())
+  local payload = Webhook.buildPayload()
+  payload.message = message
+  local body = textutils.serializeJSON(payload)
   http.post(Config.webhookUrl, body, { ["Content-Type"] = "application/json" })
 end
 

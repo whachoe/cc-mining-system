@@ -15,7 +15,7 @@ Config = {
   -- fill in your status-webhook endpoint before building; left blank,
   -- Webhook.report() is a no-op (the turtle has no access to the dev
   -- machine's .env, so this has to be a literal set here)
-  webhookUrl = "http://localhost:9119/",
+  webhookUrl = "http://localhost:9119",
 
   -- item names (turtle.getItemDetail().name) treated as valid turtle fuel
   fuelItemNames = {
