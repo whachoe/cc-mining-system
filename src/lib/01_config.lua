@@ -15,7 +15,7 @@ Config = {
   -- fill in your status-webhook endpoint before building; left blank,
   -- Webhook.report() is a no-op (the turtle has no access to the dev
   -- machine's .env, so this has to be a literal set here)
-  webhookUrl = "http://localhost:9119",
+  webhookUrl = "http://127.0.0.1:9119",
 
   -- item names (turtle.getItemDetail().name) treated as valid turtle fuel
   fuelItemNames = {
@@ -23,6 +23,10 @@ Config = {
     ["minecraft:charcoal"] = true,
     ["minecraft:lava_bucket"] = true,
     ["minecraft:blaze_rod"] = false,
+    ["minecraft:coal_block"] = true,
+    ["minecraft:charcoal_block"] = true,
+    ["minecraft:dried_kelp_block"] = true,
+    ["minecraft:dried_kelp"] = true,
   },
 
   -- block name substrings recognized as a valid external inventory

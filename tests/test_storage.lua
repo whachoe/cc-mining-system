@@ -62,4 +62,29 @@ Harness.equal(Movement.pos.x, 5, "stays at the chest's x instead of returning to
 Harness.equal(Movement.pos.y, 0, "stays at the chest's y instead of returning to the mining position")
 Harness.equal(Movement.pos.z, 0, "stays at the chest's z instead of returning to the mining position")
 
+-- the outbound trip to the chest is itself several moves; each one fires
+-- the same move hook that calls refuelCheck, and fuel is still below
+-- threshold for all of them (mid-trip, not refueled yet) -- Storage.visit
+-- must not let that re-enter itself instead of ever reaching the chest
+loadFullStack()
+Bootstrap.init() -- wires up the move hook that calls storageCheck/refuelCheck
+turtle._fuelLevel = 0
+turtle.suck = function()
+  turtle._slots[2] = { name = "minecraft:coal", count = 64 }
+  return true
+end
+
+local refuelCalls = 0
+local realRefuel = Storage.refuel
+Storage.refuel = function(...)
+  refuelCalls = refuelCalls + 1
+  return realRefuel(...)
+end
+
+Storage.refuelCheck() -- the standPos is 5 forward moves away -- each one re-fires the hook
+
+Harness.equal(refuelCalls, 1, "the outbound trip's own moves don't re-enter Storage.visit")
+Harness.equal(Movement.pos.x, 0, "returned to exactly where the refuel check was triggered from")
+Harness.equal(Movement.pos.z, 0, "returned to exactly where the refuel check was triggered from")
+
 Harness.finish()

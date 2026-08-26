@@ -113,6 +113,21 @@ function Movement.clearUp()
   return true
 end
 
+function Movement.clearBehind()
+  turtle.turnLeft()
+  turtle.turnLeft()
+  local ok, data = turtle.inspect()
+  if ok and Inventory.isStorageBlock(data.name) then
+    turtle.turnLeft()
+    turtle.turnLeft()
+    return false
+  end
+  turtle.dig()
+  turtle.turnLeft()
+  turtle.turnLeft()
+  return true
+end
+
 function Movement.turnLeft()
   turtle.turnLeft()
   Movement.facing = (Movement.facing - 1) % 4

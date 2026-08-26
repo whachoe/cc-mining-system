@@ -43,6 +43,7 @@ while not reachedBedrock and not Storage.outOfFuel do
   local sideLength = sides[sideIndex]
   for _ = 1, sideLength do
     if stopsRun(Movement.down()) then break end
+    Movement.clearBehind()    
     if stopsRun(Movement.forward()) then break end
     Movement.clearUp()
   end

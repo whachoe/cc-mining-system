@@ -7,6 +7,13 @@ Storage.location = nil -- set by Bootstrap.init() from Scan.findStorage()
 -- check this to stop mining rather than stranding themselves later
 Storage.outOfFuel = false
 
+-- true for the duration of a Storage.visit() call -- the outbound/return
+-- travel inside a visit fires the same move hook that calls
+-- storageCheck/refuelCheck, so without this guard a visit re-enters itself
+-- (recursively, while fuel is still low mid-trip) instead of ever reaching
+-- the chest
+Storage.visiting = false
+
 function Storage.setLocation(loc)
   Storage.location = loc
 end
@@ -88,13 +95,15 @@ end
 
 -- travel to the scanned storage location, do the requested interactions,
 -- then return to exactly where mining left off.
--- once a visit has discovered the chest is out of fuel, refuse to start
--- another one -- otherwise the travel *within* this very visit re-triggers
--- the move hook's own storageCheck/refuelCheck and spams repeat reports
+-- refuses to start a second, nested visit while one is already underway
+-- (see Storage.visiting) or once a visit has discovered the chest is out
+-- of fuel (see Storage.outOfFuel) -- either way, re-entering here would
+-- just repeat the same deposit/refuel dance instead of ever making progress
 function Storage.visit(opts)
-  if not Storage.hasLocation() or Storage.outOfFuel then
+  if not Storage.hasLocation() or Storage.outOfFuel or Storage.visiting then
     return
   end
+  Storage.visiting = true
 
   local returnPos = { x = Movement.pos.x, y = Movement.pos.y, z = Movement.pos.z }
   local returnFacing = Movement.facing
@@ -110,11 +119,13 @@ function Storage.visit(opts)
   -- out of fuel: stay put at the chest (the one known-safe spot) instead of
   -- wandering back toward wherever mining left off
   if Storage.outOfFuel then
+    Storage.visiting = false
     return
   end
 
   Movement.goTo(returnPos)
   Movement.turnTo(returnFacing)
+  Storage.visiting = false
 end
 
 function Storage.storageCheck()

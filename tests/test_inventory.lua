@@ -37,4 +37,26 @@ Inventory.topUpFuel(5)
 Harness.equal(turtle._fuelLevel, 5, "fuel topped up to the requested target level")
 Harness.equal(turtle._slots[1].count, 5, "5 fuel items consumed from the fuel slot")
 
+-- if mined loot ended up in the fuel slot (it's just slot 1, once fuel's
+-- been burned out of it), consolidateFuel relocates it instead of leaving
+-- it stuck blocking fuel from ever landing there again
+turtle = MockCC.newTurtle()
+dofile("src/lib/01_config.lua")
+dofile("src/lib/02_inventory.lua")
+
+turtle._slots[1] = { name = "minecraft:cobblestone", count = 32 }
+turtle._slots[4] = { name = "minecraft:coal", count = 10 }
+Inventory.consolidateFuel()
+Harness.equal(turtle._slots[1] and turtle._slots[1].name, "minecraft:coal", "the fuel slot ends up holding fuel")
+Harness.equal(turtle._slots[1].count, 10, "all 10 coal made it into the fuel slot")
+
+local relocatedSlot = nil
+for slot = 2, 16 do
+  if turtle._slots[slot] and turtle._slots[slot].name == "minecraft:cobblestone" then
+    relocatedSlot = slot
+  end
+end
+Harness.check(relocatedSlot ~= nil, "the cobblestone that was in the fuel slot got moved elsewhere, not dropped")
+Harness.equal(turtle._slots[relocatedSlot].count, 32, "the relocated cobblestone kept its full count")
+
 Harness.finish()

@@ -32,8 +32,23 @@ function Inventory.isNearlyFull()
   return Inventory.freeSlotCount() <= Config.storageFreeSlotThreshold
 end
 
--- move any fuel-type items sitting in the usable slots into the fuel slot
+-- move any fuel-type items sitting in the usable slots into the fuel slot.
+-- the fuel slot is just slot 1 like any other -- mined loot can land there
+-- once fuel's been burned out of it, and transferTo silently fails to
+-- stack fuel on top of a different item -- so relocate any non-fuel
+-- occupant out of the way first, freeing the slot for fuel to actually land
 function Inventory.consolidateFuel()
+  local occupant = turtle.getItemDetail(Config.fuelSlot)
+  if occupant ~= nil and not Inventory.isFuelItem(occupant.name) then
+    for slot = USABLE_SLOTS_START, USABLE_SLOTS_END do
+      if slot ~= Config.fuelSlot and turtle.getItemCount(slot) == 0 then
+        turtle.select(Config.fuelSlot)
+        turtle.transferTo(slot)
+        break
+      end
+    end
+  end
+
   for slot = USABLE_SLOTS_START, USABLE_SLOTS_END do
     local item = turtle.getItemDetail(slot)
     if item ~= nil and Inventory.isFuelItem(item.name) then
